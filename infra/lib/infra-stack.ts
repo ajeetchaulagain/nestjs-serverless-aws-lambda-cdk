@@ -11,12 +11,12 @@ export class InfraStack extends cdk.Stack {
 
     const nodeModulesLayer = new lambda.LayerVersion(this, 'NodeModulesLayer', {
       code: lambda.Code.fromAsset(path.join(__dirname, '../../layer')),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_20_X],
+      compatibleRuntimes: [lambda.Runtime.NODEJS_24_X],
       description: 'Production node_modules for NestJS Lambda',
     });
 
     const nestApiLambda = new lambda.Function(this, 'NestApiLambdaFunction', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'src/lambda.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../dist'), {
         exclude: ['infra', 'tsconfig*'],
