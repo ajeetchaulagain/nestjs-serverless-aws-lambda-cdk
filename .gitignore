@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# Lambda layer
+/layer/nodejs/node_modules
+
 # Logs
 logs
 *.log
