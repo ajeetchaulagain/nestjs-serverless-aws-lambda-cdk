@@ -33,7 +33,7 @@ jobs:
         run: npm run build
 
       - name: Build Lambda layer
-        run: npm run build:layer
+        run: npm run build:lambda-layer
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
