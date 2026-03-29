@@ -5,12 +5,8 @@ on:
     branches:
       - main
   pull_request:
-  workflow_dispatch:
-    inputs:
-      deploy_branch:
-        description: 'Branch to deploy'
-        required: true
-        default: 'main'
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -46,6 +42,6 @@ jobs:
         run: npm ci
         working-directory: infra
 
-      - name: Deploy
+      - name: Deploy CDK Stack
         run: npx cdk deploy --require-approval never
         working-directory: infra
