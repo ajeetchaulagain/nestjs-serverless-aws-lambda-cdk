@@ -1,98 +1,119 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS on AWS Lambda with CDK
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Reference implementation of a NestJS application running on AWS Lambda, using AWS CDK for infrastructure, HTTP API Gateway as the entry point, and GitHub Actions for CI/CD.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> Companion repository for the blog post **[A Practical Guide to Running Serverless NestJS on AWS Lambda with AWS CDK and GitHub Actions](https://deploy-preview-222--ajeetchaulagain.netlify.app/blog/nestjs-aws-serverless/)**.
 
-## Description
+## Architecture
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+![Architecture](docs/nestjs-serverless.drawio.png)
 
-## Project setup
+A client sends an HTTP request to API Gateway, which forwards it to the Lambda function using proxy integration. The Lambda function bootstraps the NestJS application, with production dependencies resolved from the attached Lambda Layer.
 
-```bash
-$ npm install
+## Stack
+
+- **Runtime:** Node.js 24 / NestJS
+- **Infrastructure:** AWS CDK (TypeScript)
+- **API:** HTTP API Gateway (v2)
+- **Lambda Layer:** Production `node_modules` separated from application code
+- **CI/CD:** GitHub Actions
+
+## Project Structure
+
+```
+├── src/                    # NestJS application source
+│   ├── lambda.ts           # Lambda handler — adapts NestJS for Lambda execution model
+│   └── main.ts             # Local development entry point
+├── infra/                  # AWS CDK infrastructure (separate npm project)
+│   ├── bin/infra.ts        # CDK app entry point
+│   └── lib/infra-stack.ts  # Stack definition — Lambda, Layer, API Gateway
+├── layer/                  # Lambda layer (gitignored, generated at build time)
+│   └── nodejs/
+│       └── node_modules/   # Production-only dependencies
+└── .github/workflows/
+    └── deploy.yml          # GitHub Actions deployment pipeline
 ```
 
-## Compile and run the project
+## Prerequisites
+
+- Node.js 24
+- AWS CLI configured (`aws configure`)
+- AWS CDK bootstrapped in your target account/region (`cdk bootstrap`)
+
+## Getting Started
+
+Install root dependencies and start the development server:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+npm run start:dev
 ```
 
-## Run tests
+The application runs locally on `http://localhost:3000`.
+
+> `infra/` is a separate npm project with its own `package.json`. Its dependencies are installed separately — see the deployment steps below.
+
+## Build
+
+Run the following before deploying:
 
 ```bash
-# unit tests
-$ npm run test
+# compile TypeScript → dist/
+npm run build
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# install production dependencies into layer/nodejs/node_modules/
+npm run build:lambda-layer
 ```
 
-## Deployment
+## Deploying Locally
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Before deploying, make sure your AWS credentials are configured locally. If you haven't set this up yet, the blog post covers the AWS CLI setup and CDK bootstrapping steps in detail.
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+aws configure
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Install the CDK dependencies inside `infra/` — this is a separate npm project from the root and needs its own install:
 
-## Resources
+```bash
+cd infra && npm install
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+The stack is defined in `infra/lib/infra-stack.ts`. It provisions the Lambda function, attaches the Layer, and wires up HTTP API Gateway. Synthesize the CloudFormation template first to validate the stack without touching AWS:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npx cdk synth
+```
 
-## Support
+Then deploy:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npx cdk deploy
+```
 
-## Stay in touch
+After a successful deploy, the API URL is printed in the terminal:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
+Outputs:
+InfraStack.HttpApiUrl = https://abc123.execute-api.us-east-1.amazonaws.com/
+```
+
+## Deploying via GitHub Actions
+
+The workflow at `.github/workflows/deploy.yml` triggers automatically on push to `main` and on pull requests.
+
+Add the following to your repository under **Settings → Secrets and variables → Actions**:
+
+| Name                    | Type     | Description                          |
+| ----------------------- | -------- | ------------------------------------ |
+| `AWS_ACCESS_KEY_ID`     | Secret   | AWS IAM access key                   |
+| `AWS_SECRET_ACCESS_KEY` | Secret   | AWS IAM secret key                   |
+| `AWS_REGION`            | Variable | Target AWS region (e.g. `us-east-1`) |
+
+> `AWS_REGION` is stored as a Variable rather than a Secret so it remains visible in workflow logs.
+
+Once the workflow file is merged to `main`, pushes and pull requests will trigger the pipeline automatically.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
