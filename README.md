@@ -1,8 +1,10 @@
-# NestJS on AWS Lambda with CDK
+# NestJS on AWS Lambda with AWS CDK
 
 Reference implementation of a NestJS application running on AWS Lambda, using AWS CDK for infrastructure, HTTP API Gateway as the entry point, and GitHub Actions for CI/CD.
 
-> Companion repository for the blog post **[A Practical Guide to Running Serverless NestJS on AWS Lambda with AWS CDK and GitHub Actions](https://deploy-preview-222--ajeetchaulagain.netlify.app/blog/nestjs-aws-serverless/)**.
+> Companion repository for the blog post **[How to Deploy NestJS to AWS Lambda Using CDK and GitHub Actions](https://ajeetchaulagain.com/blog/nestjs-aws-lambda-cdk-deployment/)**.
+
+> **Note:** The NestJS application itself is a default CLI scaffold that returns `Hello World!` from the root endpoint. The focus of this repository is the deployment setup, not the application code.
 
 ## Architecture
 
@@ -12,11 +14,12 @@ A client sends an HTTP request to API Gateway, which forwards it to the Lambda f
 
 ## Stack
 
-- **Runtime:** Node.js 24 / NestJS
-- **Infrastructure:** AWS CDK (TypeScript)
-- **API:** HTTP API Gateway (v2)
-- **Lambda Layer:** Production `node_modules` separated from application code
-- **CI/CD:** GitHub Actions
+- **Application:** NestJS (default scaffold, returns `Hello World!` from `/`)
+- **Lambda runtime:** Node.js v20 and above — the handler uses `async/await` and works with any supported runtime. If you use `NODEJS_24_X`, note that the AWS Lambda Node.js 24 runtime dropped support for the callback-style handler, which is why this handler is written using `async/await`.
+- **Infrastructure as code:** AWS CDK (TypeScript)
+- **API:** HTTP API Gateway (v2) with Lambda proxy integration
+- **Dependencies:** Production `node_modules` separated into a Lambda Layer
+- **CI/CD:** GitHub Actions — deploys on push to `main` and on pull requests
 
 ## Project Structure
 
@@ -36,7 +39,7 @@ A client sends an HTTP request to API Gateway, which forwards it to the Lambda f
 
 ## Prerequisites
 
-- Node.js 24
+- Node.js 20 or 24
 - AWS CLI configured (`aws configure`)
 - AWS CDK bootstrapped in your target account/region (`cdk bootstrap`)
 
@@ -55,10 +58,10 @@ The application runs locally on `http://localhost:3000`.
 
 ## Build
 
-Run the following before deploying:
+CDK packages `dist/` and `layer/nodejs/node_modules/` as deployment assets at deploy time — both must be present before running `cdk deploy`. Neither is committed to the repository, so you need to generate them locally first:
 
 ```bash
-# compile TypeScript → dist/
+# Run nest production build → dist/
 npm run build
 
 # install production dependencies into layer/nodejs/node_modules/
